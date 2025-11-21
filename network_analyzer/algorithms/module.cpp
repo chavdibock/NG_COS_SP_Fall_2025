@@ -1,20 +1,33 @@
 ﻿#include <pybind11/pybind11.h>
-#include "headers/OcSvm.h"
+#include <pybind11/stl.h>
+
+#include "headers/KNN.h"
 
 namespace py = pybind11;
 
-// (optional utility from your snippet)
-int add(int a, int b) { return a + b; }
-
 PYBIND11_MODULE(algos, m) {
-    m.doc() = "Algorithms bindings";
+    m.doc() = "GPU KNN classifier (C++/CUDA, exposed via pybind11)";
 
-    // Expose OcSvm(int, double, int)
-    py::class_<OcSvm>(m, "OcSvm")
-        .def(py::init<int, double, int>(),
-            py::arg("a"), py::arg("b"), py::arg("c"),
-            "Construct OcSvm(a, b, c)");
-
-    // keep your trivial function if you want it
-    m.def("add", &add, py::arg("a"), py::arg("b"), "Return a + b.");
+    py::class_<KNN>(m, "KNN")
+        .def(py::init<int>(), py::arg("k"))
+        .def("train",
+            [](KNN& self,
+                const std::vector<float>& x,
+                const std::vector<float>& y,
+                int n_features) {
+                    self.Train(x, y, n_features);
+            },
+            py::arg("x"),
+            py::arg("y"),
+            py::arg("n_features"))
+        .def("predict",
+            [](const KNN& self,
+                const std::vector<float>& x,
+                int n_samples) {
+                    return self.Predict(x, n_samples);
+            },
+            py::arg("x"),
+            py::arg("n_samples"))
+        .def("sanity_check", &KNN::SanityCheck)
+        ;
 }
