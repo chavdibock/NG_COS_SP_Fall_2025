@@ -12,7 +12,7 @@ namespace {
                 cudaGetErrorString(err));
         }
     }
-} // namespace
+}
 
 KNN::KNN(int k) : k_(k) {
     if (k_ <= 0) {
@@ -59,28 +59,6 @@ vector<float> KNN::Predict(const vector<float>& x_test,
     cudaFree(d_y_pred);
 
     return y_pred;
-}
-
-void KNN::SaveModel(const string& path) const {
-    ofstream out(path, ios::binary);
-    if (!out) {
-        throw runtime_error("Cannot open file for writing: " + path);
-    }
-
-    out.write(reinterpret_cast<const char*>(&n_features_), sizeof(n_features_));
-    out.write(reinterpret_cast<const char*>(&n_train_), sizeof(n_train_));
-    out.write(reinterpret_cast<const char*>(&k_), sizeof(k_));
-}
-
-void KNN::LoadModelSettings(const string& path) {
-    ifstream in(path, ios::binary);
-    if (!in) {
-        throw runtime_error("Cannot open file for reading: " + path);
-    }
-    in.read(reinterpret_cast<char*>(&n_features_), sizeof(n_features_));
-    in.read(reinterpret_cast<char*>(&n_train_), sizeof(n_train_));
-    in.read(reinterpret_cast<char*>(&k_), sizeof(k_));
-    // Note: this only restores metadata, not the actual training data
 }
 
 void KNN::SanityCheck()
