@@ -14,6 +14,9 @@ pybind11_add_module(algos
 	implementation/OcSVM.cpp
 	implementation/gpu_knn_kernel.cu
 	implementation/gpu_oc_svm_kernel.cu
+	implementation/benchmarks_gpu.cu
+	implementation/benchmarks.cpp
+
 )  # module name must be "example"
 
 # drop the built .pyd next to example.cpp

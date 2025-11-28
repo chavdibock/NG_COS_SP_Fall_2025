@@ -1,9 +1,9 @@
 ﻿#include <pybind11/pybind11.h>
-
+#include <pybind11/stl.h>
 #include "headers/KNN.h"
 #include "headers/OcSvm.h"
 #include "headers/gpu_oc_svm_kernel.h" 
-
+#include "headers/benchmarks.h"
 namespace py = pybind11;
 using namespace std;
 PYBIND11_MODULE(algos, m) {
@@ -51,4 +51,19 @@ PYBIND11_MODULE(algos, m) {
             },
             py::arg("x"), py::arg("n_samples"))
         .def("get_params", &OcSvm::GetParams, "Get dictionary of model parameters");
+
+
+    // Benchmark funktion to be used for evaluations
+    m.def("roc_auc",
+        &roc_auc,
+        py::arg("scores"),
+        py::arg("labels"),
+        "Compute ROC-AUC");
+
+    m.def("recall",
+        &recall_at_threshold,
+        py::arg("scores"),
+        py::arg("labels"),
+        py::arg("threshold") = 0.5f,
+        "Compute recall");
 }
