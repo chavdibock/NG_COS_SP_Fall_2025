@@ -4,6 +4,7 @@
 #include "headers/OcSvm.h"
 #include "headers/gpu_oc_svm_kernel.h" 
 #include "headers/benchmarks.h"
+#include "headers/preprocessing.h"
 namespace py = pybind11;
 using namespace std;
 PYBIND11_MODULE(algos, m) {
@@ -51,7 +52,18 @@ PYBIND11_MODULE(algos, m) {
             },
             py::arg("x"), py::arg("n_samples"))
         .def("get_params", &OcSvm::GetParams, "Get dictionary of model parameters");
+       
 
+    //Used for noisy data
+    m.def("pca_scaling",
+        &pca_scaling,
+        py::arg("x"),
+        py::arg("n_samples"),
+        py::arg("n_features"),
+        py::arg("use_scaling") = true,
+        py::arg("use_pca") = false,
+        py::arg("n_pca_components") = 0,
+        "Apply Scaling and/or PCA to a dataset and return the result.");
 
     // Benchmark funktion to be used for evaluations
     m.def("roc_auc",

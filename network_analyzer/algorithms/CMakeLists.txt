@@ -16,6 +16,7 @@ pybind11_add_module(algos
 	implementation/gpu_oc_svm_kernel.cu
 	implementation/benchmarks_gpu.cu
 	implementation/benchmarks.cpp
+	implementation/preprocessing.cpp
 
 )  # module name must be "example"
 
