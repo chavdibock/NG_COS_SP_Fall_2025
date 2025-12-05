@@ -1,0 +1,39 @@
+{
+    "model_id": "ocsvm_rbf_v1",
+    "model_type": "ocsvm",
+
+    "x": [
+        {
+            "bytes_ps": 123.4,
+            "pkts_ps": 56.0,
+            "tcp_fraction": 0.8,
+            "mean_pkt_size": 450.2,
+            "syn_rate": 2.1,
+            "syn_ack_ratio": 0.9,
+            "half_open_conn_count": 10,
+            "avg_bytes_per_flow": 1200.0
+        },
+        {
+            "bytes_ps": 200.0,
+            "pkts_ps": 80.0,
+            "tcp_fraction": 0.6,
+            "mean_pkt_size": 400.0,
+            "syn_rate": 1.5,
+            "syn_ack_ratio": 0.95,
+            "half_open_conn_count": 5,
+            "avg_bytes_per_flow": 900.0
+        }
+    ],
+
+    "y": [ 1, 1 ],
+
+    "kernel": "RBF",
+    "gamma": 0.01,
+    "nu": 0.1,
+    "coef0": 0.0,
+    "degree": 3,
+
+    "use_scaling": true,
+    "use_pca": false,
+    "n_pca_components": 4
+}

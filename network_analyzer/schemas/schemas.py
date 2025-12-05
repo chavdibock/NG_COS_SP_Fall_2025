@@ -42,14 +42,16 @@ class TrainRequest(BaseModel):
     x: List[TrafficWindow] = Field(..., description="Training samples")
     y: List[int] = Field(..., description="Labels: 1 = DDoS, 0 = normal")
 
-    # Optional hyperparameters
+
     k: Optional[int] = Field(None, description="K for KNN (required if model_type = 'knn')")
     kernel: Optional[Literal["LINEAR", "RBF", "POLY", "SIGMOID"]] = None
     gamma: Optional[float] = None
     nu: Optional[float] = None
     coef0: Optional[float] = None
     degree: Optional[int] = None
-
+    use_scaling: Optional[bool] = None
+    use_pca: Optional[bool] = None
+    n_pca_components: Optional[int] = None
 
 class TrainReport(BaseModel):
     model_id: str

@@ -81,20 +81,46 @@ async def _prepare_ip_traffic(ip: str) -> (List[TrafficWindow], List[float], int
 
 def train_model(req: TrainRequest) -> TrainReport:
      
+    params: Dict[str, Any] = {}
+
+    if req.model_type == "knn":
+        if req.k is None:
+            raise ValueError("k must be provided for KNN models")
+        params["k"] = int(req.k)
+    elif req.model_type == "ocsvm":
+        if req.kernel is not None:
+            params["kernel"] = req.kernel
+
+        if req.gamma is not None:
+            params["gamma"] = float(req.gamma)
+        if req.nu is not None:
+            params["nu"] = float(req.nu)
+        if req.coef0 is not None:
+            params["coef0"] = float(req.coef0)
+        if req.degree is not None:
+            params["degree"] = int(req.degree)
+    else:
+        raise ValueError(f"Unsupported model_type: {req.model_type}")
+
+    if req.use_scaling is not None:
+        params["use_scaling"] = bool(req.use_scaling)
+    if req.use_pca is not None:
+        params["use_pca"] = bool(req.use_pca)
+    if req.n_pca_components is not None:
+        params["n_pca_components"] = int(req.n_pca_components)
+
     wrapper = model_manager.create_or_replace_model(
         req.model_id,
         req.model_type,
-        dict(req.params or {}),
+        params,
     )
 
-    
     x_flat, n_samples, n_features = _flatten_samples(req.x)
     if len(req.y) != n_samples:
         raise ValueError("Number of labels (y) must match number of samples (x)")
 
-    y = [float(v) for v in req.y]
+    y = [int(v) for v in req.y]
 
-   
     x_flat, n_features = _apply_preprocessing(
         x_flat,
         n_samples,
@@ -102,10 +128,8 @@ def train_model(req: TrainRequest) -> TrainReport:
         wrapper.params,
     )
 
-
     wrapper.train(x_flat, y, n_features)
 
-   
     scores = wrapper.predict(x_flat, n_samples)
     roc_auc_val = algos.roc_auc(scores, y)
     recall_val = algos.recall(scores, y, float(settings.DEFAULT_RECALL_THRESHOLD))
@@ -121,7 +145,8 @@ def train_model(req: TrainRequest) -> TrainReport:
         model_type=req.model_type,
         n_samples=n_samples,
         n_features=n_features,
-        params=wrapper.get_params(),
+        # IMPORTANT: use wrapper.params so CSV and API behave the same
+        params=wrapper.params,
         metrics=metrics,
     )
 
@@ -273,13 +298,16 @@ async def analyze_ip_multiple(
 
     return AnalyzeMultiResponse(ip=ip, results=results)
 
-async def _load_training_data_from_json() -> Tuple[List[TrafficWindow], Optional[List[int]]]:
- 
+async def _load_training_data_from_json(
+    filename: str,
+    require_labels: bool,
+) -> Tuple[List[TrafficWindow], Optional[List[int]]]:
+
     base_dir = Path(__file__).resolve().parent.parent
-    json_path = base_dir / "training_data.json"
+    json_path = base_dir / filename
 
     if not json_path.exists():
-        raise FileNotFoundError(f"training_data.json not found at {json_path}")
+        raise FileNotFoundError(f"{filename} not found at {json_path}")
 
     with json_path.open() as f:
         raw = json.load(f)
@@ -291,23 +319,27 @@ async def _load_training_data_from_json() -> Tuple[List[TrafficWindow], Optional
         x_raw = raw
         y_raw = None
     else:
-        raise ValueError("training_data.json has unsupported structure")
+        raise ValueError(f"{filename}: expected dict or list at top level")
 
-    if not x_raw:
-        raise ValueError("training_data.json: no samples found")
+    if not isinstance(x_raw, list):
+        raise ValueError(f"{filename}: 'x' must be a list")
 
-   
     windows: List[TrafficWindow] = [TrafficWindow(**item) for item in x_raw]
 
     labels: Optional[List[int]] = None
     if y_raw is not None:
+        if not isinstance(y_raw, list):
+            raise ValueError(f"{filename}: 'y' must be a list when present")
         if len(y_raw) != len(windows):
             raise ValueError(
-                f"training_data.json: len(y)={len(y_raw)} does not match len(x)={len(windows)}"
+                f"{filename}: len(y)={len(y_raw)} does not match len(x)={len(windows)}"
             )
         labels = [int(v) for v in y_raw]
+    elif require_labels:
+        raise ValueError(f"{filename}: labels (y) missing")
 
     return windows, labels
+
 
 
 async def train_all_models_on_startup() -> None:
@@ -316,42 +348,101 @@ async def train_all_models_on_startup() -> None:
         print("[startup] No models registered; skipping auto-training.")
         return
 
-    try:
-        windows, labels = await _load_training_data_from_json()
-    except Exception as e:
-        print(f"[startup] Failed to load training data: {e}")
-        return
+    knn_windows: Optional[List[TrafficWindow]] = None
+    knn_labels: Optional[List[int]] = None
+    knn_x_flat: Optional[List[float]] = None
+    knn_n_samples: Optional[int] = None
+    knn_n_features: Optional[int] = None
 
-    x_flat, n_samples, n_features = _flatten_samples(windows)
+    try:
+        knn_windows, knn_labels = await _load_training_data_from_json(
+            "training_data_knn.json",
+            require_labels=True, 
+        )
+        knn_x_flat, knn_n_samples, knn_n_features = _flatten_samples(knn_windows)
+        print(
+            f"[startup] Loaded KNN training data: {knn_n_samples} samples, {knn_n_features} features."
+        )
+    except FileNotFoundError:
+        print(
+            "[startup] training_data_knn.json not found; KNN models will not be auto-trained."
+        )
+    except Exception as e:
+        print(f"[startup] Failed to load KNN training data: {e}")
+
+    ocsvm_windows: Optional[List[TrafficWindow]] = None
+    ocsvm_x_flat: Optional[List[float]] = None
+    ocsvm_n_samples: Optional[int] = None
+    ocsvm_n_features: Optional[int] = None
+
+    try:
+        ocsvm_windows, _ = await _load_training_data_from_json(
+            "training_data_oc_svm.json",
+            require_labels=False, 
+        )
+        ocsvm_x_flat, ocsvm_n_samples, ocsvm_n_features = _flatten_samples(
+            ocsvm_windows
+        )
+       
+    except FileNotFoundError:
+        print(
+            "training_data_ocsvm.json not found"
+        )
+    except Exception as e:
+        print(f"Failed to load OC-SVM training data: {e}")
 
     for model_id, info in models_info.items():
         wrapper = model_manager.get_model(model_id)
 
         if wrapper.model_type == "knn":
-            if labels is None:
-                print(
-                    "no labels available in training_data.json"
-                )
+            if (
+                knn_x_flat is None
+                or knn_labels is None
+                or knn_n_samples is None
+                or knn_n_features is None
+            ):
+                print("skipping model")
                 continue
 
-            print(
-                f"on {n_samples} samples with labels..."
-            )
+            #if wrapper.n_features is not None and wrapper.n_features != knn_n_features:
+            #    print(
+            #        f" KNN model '{model_id}' expects "
+            #        f"{wrapper.n_features} training data has "
+            #        f"{knn_n_features}"
+            #    )
+
             try:
-                wrapper.train(x_flat, labels, n_features)
-                print(
-                    f"n_features={wrapper.n_features}"
-                )
+                wrapper.train(knn_x_flat, knn_labels, knn_n_features)
+               
             except Exception as e:
-                print(f"[startup] Failed to train KNN model '{model_id}': {e}")
+                print(f"Failed to train KNN model '{model_id}': {e}")
 
         elif wrapper.model_type == "ocsvm":
-            dummy_labels = [1] * n_samples
+            if (
+                ocsvm_x_flat is None
+                or ocsvm_n_samples is None
+                or ocsvm_n_features is None
+            ):
+                print("No valid Oc-SVM data")
+                continue
+
+            dummy_labels = [1] * ocsvm_n_samples
+
+            # if wrapper.n_features is not None and wrapper.n_features != ocsvm_n_features:
+               # print(
+               #     f"[startup] Warning: OC-SVM model '{model_id}' expects "
+               #     f"{wrapper.n_features} features but training data has "
+               #     f"{ocsvm_n_features}; using training data feature count."
+               # )
 
             try:
-                wrapper.train(x_flat, dummy_labels, n_features)
+                wrapper.train(ocsvm_x_flat, dummy_labels, ocsvm_n_features)
+                #print(
+                #    f"[startup] Trained OC-SVM model '{model_id}' on "
+                #    f"{ocsvm_n_samples} samples (n_features={wrapper.n_features})."
+                #)
             except Exception as e:
-                print(e)
+                print(f"[startup] Failed to train OC-SVM model '{model_id}': {e}")
 
         else:
-            print(model_type)
+            print(f"[startup] Unknown model_type '{wrapper.model_type}' for '{model_id}'")

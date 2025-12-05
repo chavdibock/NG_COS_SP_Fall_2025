@@ -1,0 +1,28 @@
+[
+    {
+        "bytes_ps": 16395.2,
+        "pkts_ps": 50.6,
+        "tcp_fraction": 1.0,
+        "mean_pkt_size": 324.0158102766798,
+        "tiny_pkt_fraction": 0.23715415019762845,
+        "syn_rate": 0.0,
+        "syn_ack_ratio": 0.0,
+        "half_open_conn_count": 0,
+        "avg_bytes_per_flow": 40988.0,
+        "new_conn_rate": 0.0,
+        "peak_to_avg_rate": 3.529325656289646
+    },
+    {
+        "bytes_ps": 123.2,
+        "pkts_ps": 2.2,
+        "tcp_fraction": 0.9090909090909091,
+        "mean_pkt_size": 56.0,
+        "tiny_pkt_fraction": 0.9090909090909091,
+        "syn_rate": 0.0,
+        "syn_ack_ratio": 0.0,
+        "half_open_conn_count": 0,
+        "avg_bytes_per_flow": 205.33333333333334,
+        "new_conn_rate": 0.0,
+        "peak_to_avg_rate": 5.0
+    }
+]

@@ -141,6 +141,8 @@ void OcSvm::solve_qp(const float* d_kernel_matrix, int n_samples) {
         
         for (int i = 0; i < n_samples; ++i) {
             alpha[i] = alpha[i] - eta * grad[i];
+
+
         }
 
         
@@ -154,7 +156,7 @@ void OcSvm::solve_qp(const float* d_kernel_matrix, int n_samples) {
         }
 
         if (diff_norm_sq < tol * tol) {
-            cout << "[OC-SVM] QP converged at iteration " << iter << endl;
+           // cout << "[OC-SVM] QP converged at iteration " << iter << endl;
             break;
         }
     }
@@ -259,7 +261,7 @@ vector<float> OcSvm::Predict(const vector<float>& x_test, int n_test_samples) co
 
    
     for (int i = 0; i < n_test_samples; ++i) {
-        h_results[i] = (h_results[i] >= 0.0f) ? 1.0f : -1.0f;
+        h_results[i] = (h_results[i] >= 0.0f) ? 0 : 1;
     }
 
     return h_results;
