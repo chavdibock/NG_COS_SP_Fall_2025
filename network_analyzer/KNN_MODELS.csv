@@ -1,0 +1,3 @@
+model_id,k,use_scaling,use_pca,n_pca_components
+knn_default,5,1,0,0
+knn_pca,5,1,1,5

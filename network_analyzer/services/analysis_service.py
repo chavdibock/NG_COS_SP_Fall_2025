@@ -16,6 +16,8 @@ from schemas.schemas import (
     AnalyzeMultiResponse,
     AnalyzeModelsRequest, 
     TrafficWindow,
+    TestRequest,
+    TestReport,
 )
 from clients.sniffer_client import SnifferClient
 from config.config import settings
@@ -121,6 +123,49 @@ def train_model(req: TrainRequest) -> TrainReport:
         n_features=n_features,
         params=wrapper.get_params(),
         metrics=metrics,
+    )
+
+
+def test_model(model_id: str, req: TestRequest) -> TestReport:
+
+    wrapper = model_manager.get_model(model_id)
+
+    
+    x_flat, n_samples, n_features = _flatten_samples(req.x)
+
+    if len(req.y) != n_samples:
+        raise ValueError("Number of labels (y) must match number of samples (x)")
+
+    y = [int(v) for v in req.y]
+
+    
+    if wrapper.n_features is not None and wrapper.n_features != n_features:
+        raise ValueError(
+            f"Model expects {wrapper.n_features} features, but got {n_features}"
+        )
+
+   
+    scores = wrapper.predict(x_flat, n_samples)
+    preds = [1 if s > 0.0 else 0 for s in scores]
+
+    
+    roc_auc_val = algos.roc_auc(scores, y)
+    recall_val = algos.recall(scores, y, settings.DEFAULT_RECALL_THRESHOLD)
+
+    metrics = {
+        "roc_auc": float(roc_auc_val),
+        "recall_at_threshold": float(recall_val),
+        "threshold": float(settings.DEFAULT_RECALL_THRESHOLD),
+    }
+
+    return TestReport(
+        model_id=model_id,
+        model_type=wrapper.model_type,
+        n_samples=n_samples,
+        n_features=n_features,
+        metrics=metrics,
+        predictions=preds,
+        raw_scores=[float(s) for s in scores],
     )
 
 

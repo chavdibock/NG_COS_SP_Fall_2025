@@ -10,6 +10,8 @@ from schemas.schemas import (
     AnalyzeResponse,
     AnalyzeMultiResponse,
     AnalyzeModelsRequest,
+    TestRequest,
+    TestReport,
 )
 from models.manager import model_manager
 
@@ -18,7 +20,9 @@ from services.analysis_service import (
     predict_with_model,
     analyze_ip,
     analyze_ip_multiple,
-    train_all_models_on_startup
+    train_all_models_on_startup,
+    test_model,
+
 )
 
 
@@ -58,6 +62,18 @@ async def predict(model_id: str, req: PredictRequest):
     return resp
 
 
+@app.post("/test/{model_id}", response_model=TestReport)
+async def test(model_id: str, req: TestRequest):
+    try:
+        result = test_model(model_id, req)
+    except KeyError:
+        raise HTTPException(status_code=404, detail=f"Model '{model_id}' not found")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    return result
+
+
 @app.get("/analyze/{ip}/{model_id}", response_model=AnalyzeResponse)
 async def analyze(ip: str, model_id: str):
 
@@ -72,9 +88,6 @@ async def analyze(ip: str, model_id: str):
 
 @app.get("/analyze_all/{ip}", response_model=AnalyzeMultiResponse)
 async def analyze_all_models(ip: str):
-    """
-    Analyze IP traffic using all loaded models.
-    """
     try:
         result = await analyze_ip_multiple(ip)
     except KeyError as e:
@@ -87,9 +100,6 @@ async def analyze_all_models(ip: str):
 
 @app.post("/analyze/{ip}/models", response_model=AnalyzeMultiResponse)
 async def analyze_specific_models(ip: str, req: AnalyzeModelsRequest):
-    """
-    Analyze IP traffic using only a subset of models specified in the request.
-    """
     try:
         result = await analyze_ip_multiple(ip, req.model_ids)
     except KeyError as e:

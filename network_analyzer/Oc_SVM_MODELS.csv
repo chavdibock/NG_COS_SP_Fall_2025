@@ -1,0 +1,5 @@
+model_id,kernel,gamma,nu,coef0,degree,use_scaling,use_pca,n_pca_components
+ocsvm_default,RBF,0.1,0.05,0.0,3,1,0,0
+ocsvm_pca,RBF,0.1,0.05,0.0,3,1,1,5
+ocsvm_linear,LINEAR,0.01,0.1,0.0,1,1,0,0
+ocsvm_poly,POLY,0.01,0.05,0.5,4,1,1,5

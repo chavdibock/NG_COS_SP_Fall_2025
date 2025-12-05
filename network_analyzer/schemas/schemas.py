@@ -4,7 +4,6 @@ from typing import List, Literal, Dict, Optional, Union
 from pydantic import BaseModel, Field
 
 
-# --- Common feature schema (matches /packets/{ip} output) ---
 
 class TrafficWindow(BaseModel):
     bytes_ps: float
@@ -19,7 +18,22 @@ class TrafficWindow(BaseModel):
     peak_to_avg_rate: float
         
 
-# --- Training / prediction schemas ---
+class TestRequest(BaseModel):
+
+    x: List[TrafficWindow]
+    y: List[int] 
+
+
+class TestReport(BaseModel):
+
+    model_id: str
+    model_type: str
+    n_samples: int
+    n_features: int
+    metrics: Dict[str, float]
+    predictions: List[int]
+    raw_scores: List[float]
+
 
 class TrainRequest(BaseModel):
     model_id: str = Field(..., description="Unique identifier for the model instance")
