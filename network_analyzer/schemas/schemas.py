@@ -17,7 +17,7 @@ class TrafficWindow(BaseModel):
     avg_bytes_per_flow: float
     new_conn_rate: float
     peak_to_avg_rate: float
-
+        
 
 # --- Training / prediction schemas ---
 
@@ -66,3 +66,12 @@ class AnalyzeResponse(BaseModel):
     window_predictions: List[int]
     ongoing_ddos: bool
     params: Dict[str, Union[float, int, str]]
+
+
+class AnalyzeMultiResponse(BaseModel):
+    ip: str
+    results: List[AnalyzeResponse]
+
+
+class AnalyzeModelsRequest(BaseModel):
+    model_ids: List[str]
